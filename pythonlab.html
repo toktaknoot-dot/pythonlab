@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Student Lab</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for a dark, professional coding environment */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;600&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d1117; /* Dark GitHub background */
+            color: #c9d1d9; /* Light text */
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* Custom scrollbar for output area */
+        #output-area::-webkit-scrollbar {
+            width: 8px;
+        }
+        #output-area::-webkit-scrollbar-track {
+            background: #161b22;
+        }
+        #output-area::-webkit-scrollbar-thumb {
+            background: #30363d;
+            border-radius: 4px;
+        }
+        #output-area::-webkit-scrollbar-thumb:hover {
+            background: #484f58;
+        }
+
+        /* Ace Editor container styling */
+        #editor {
+            width: 100%;
+            height: 100%;
+            font-family: 'Fira Code', monospace; /* Monospace font for code */
+            font-size: 16px;
+            border-radius: 0.5rem;
+        }
+
+        /* Container for the main grid (Editor + Output) */
+        .grid-container {
+            display: grid;
+            gap: 1rem;
+            padding: 1rem;
+            height: calc(100vh - 120px); /* Full height minus header and controls */
+        }
+        
+        /* Responsive layout for the grid */
+        @media (min-width: 1024px) {
+            .grid-container {
+                grid-template-columns: 2fr 1fr; /* Editor takes 2/3, Output takes 1/3 on desktop */
+            }
+        }
+        @media (max-width: 1023px) {
+             .grid-container {
+                grid-template-columns: 1fr; /* Stacked on mobile/tablet */
+                height: auto; /* Allow scrolling */
+                overflow-y: auto;
+            }
+            #editor-container {
+                height: 40vh; /* Fixed height for editor on mobile */
+            }
+            #output-area {
+                height: 30vh; /* Fixed height for output on mobile */
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="app" class="h-screen flex flex-col">
+        <!-- Header -->
+        <header class="p-4 bg-gray-800 shadow-lg flex justify-between items-center">
+            <h1 class="text-3xl font-bold text-teal-400">🐍 Python Project Lab</h1>
+            <span id="user-info" class="text-sm font-mono bg-gray-700 px-3 py-1 rounded-full">Loading User...</span>
+        </header>
+
+        <!-- Main Workspace -->
+        <div class="flex-grow grid-container">
+            <!-- Code Editor Area -->
+            <div id="editor-container" class="bg-gray-900 rounded-xl shadow-2xl p-0.5">
+                <div id="editor"># Start your Python project here!\n# Example: print("Hello, World!")\nfor i in range(5):\n    print(i * 2)</div>
+            </div>
+
+            <!-- Output Console Area -->
+            <div class="flex flex-col space-y-4">
+                <div class="flex-grow bg-gray-900 rounded-xl shadow-2xl p-4 flex flex-col h-full">
+                    <h2 class="text-xl font-semibold mb-2 text-yellow-400 border-b border-gray-700 pb-1">Console Output</h2>
+                    <pre id="output-area" class="flex-grow overflow-y-auto bg-gray-800 text-sm p-3 rounded-lg text-green-400 whitespace-pre-wrap"></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls (Run, Save, Load) -->
+        <div class="p-4 bg-gray-800 flex flex-wrap justify-center gap-4 border-t border-gray-700">
+            <button onclick="runPythonCode()" class="px-6 py-3 bg-teal-600 hover:bg-teal-500 text-white font-semibold rounded-lg shadow-xl transition duration-200 transform hover:scale-105 active:bg-teal-700 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.878v4.244a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                Run Code (Skulpt)
+            </button>
+            <button onclick="openSaveModal()" class="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-xl transition duration-200 transform hover:scale-105 active:bg-blue-700 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+                </svg>
+                Save Project
+            </button>
+            <button onclick="openLoadModal()" class="px-6 py-3 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-lg shadow-xl transition duration-200 transform hover:scale-105 active:bg-purple-700 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+                Load Project
+            </button>
+        </div>
+
+        <!-- Notification Bar -->
+        <div id="notification" class="fixed top-2 right-2 p-3 rounded-lg shadow-2xl transition-opacity duration-300 opacity-0 bg-gray-800 text-sm z-50"></div>
+    </div>
+
+    <!-- Modals -->
+
+    <!-- Save Modal -->
+    <div id="save-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-40 flex items-center justify-center">
+        <div class="bg-gray-800 p-6 rounded-xl w-96 shadow-2xl border border-gray-700">
+            <h3 class="text-2xl font-bold mb-4 text-white">Save Project</h3>
+            <input type="text" id="project-name-input" placeholder="Enter project name (e.g., 'My First Loop')" 
+                   class="w-full p-3 mb-4 rounded-lg bg-gray-700 border border-gray-600 text-white focus:ring-teal-500 focus:border-teal-500">
+            <div class="flex justify-end space-x-3">
+                <button onclick="closeSaveModal()" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg transition duration-200">Cancel</button>
+                <button onclick="saveProject()" class="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white font-semibold rounded-lg transition duration-200">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Modal -->
+    <div id="load-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-40 flex items-center justify-center">
+        <div class="bg-gray-800 p-6 rounded-xl w-full max-w-lg shadow-2xl border border-gray-700">
+            <h3 class="text-2xl font-bold mb-4 text-white">Load Saved Projects</h3>
+            <div id="project-list" class="space-y-2 max-h-80 overflow-y-auto bg-gray-700 p-3 rounded-lg mb-4">
+                <p class="text-gray-400">Loading projects...</p>
+            </div>
+            <div class="flex justify-end">
+                <button onclick="closeLoadModal()" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg transition duration-200">Close</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Load Skulpt, Ace Editor, and Firebase Libraries -->
+    <script src="https://skulpt.org/js/skulpt.min.js"></script>
+    <script src="https://skulpt.org/js/skulpt-stdlib.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
+
+    <!-- Firebase Imports -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, collection, query, onSnapshot, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+
+        // Global variables for Firebase and Editor
+        window.db = null;
+        window.auth = null;
+        window.userId = null;
+        window.editor = null;
+        window.projectCollectionRef = null;
+
+        setLogLevel('Debug');
+
+        // Initial setup function
+        async function setupFirebase() {
+            // Retrieve global variables provided by the environment
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+            const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+            if (Object.keys(firebaseConfig).length === 0) {
+                console.error("Firebase config is missing or empty. Project saving/loading will not work.");
+                document.getElementById('user-info').textContent = "Auth Error";
+                showNotification('Project saving is disabled due to missing Firebase configuration.', 'bg-red-600');
+                return;
+            }
+            
+            try {
+                const app = initializeApp(firebaseConfig);
+                window.db = getFirestore(app);
+                window.auth = getAuth(app);
+
+                // Authenticate user
+                await new Promise((resolve, reject) => {
+                    const unsubscribe = onAuthStateChanged(window.auth, async (user) => {
+                        unsubscribe(); // Stop listening after the first state change
+                        if (user) {
+                            // User authenticated (via token or anonymous sign-in)
+                            window.userId = user.uid;
+                            resolve();
+                        } else if (initialAuthToken) {
+                            // Use custom token if available
+                            await signInWithCustomToken(window.auth, initialAuthToken);
+                            window.userId = window.auth.currentUser.uid;
+                            resolve();
+                        } else {
+                            // Sign in anonymously if no token is available
+                            const anonUser = await signInAnonymously(window.auth);
+                            window.userId = anonUser.user.uid;
+                            resolve();
+                        }
+                    }, reject);
+                });
+                
+                // Set up collection reference for private user data
+                // Path: /artifacts/{appId}/users/{userId}/python_projects
+                window.projectCollectionRef = collection(window.db, 
+                    'artifacts/${appId}/users/${window.userId}/python_projects');
+
+                // Update UI
+                document.getElementById('user-info').textContent = 'User ID: ${window.userId.substring(0, 8)}...';
+                showNotification('Connected to Firestore. You can save your projects.', 'bg-green-600');
+                
+                // Start listening for projects immediately
+                window.listenForProjects();
+
+            } catch (error) {
+                console.error("Firebase setup or authentication failed:", error);
+                document.getElementById('user-info').textContent = "Auth Failed";
+                showNotification('Authentication failed: ${error.message}', 'bg-red-600');
+            }
+        }
+
+        // Project Saving Function
+        window.saveProject = async function() {
+            const projectName = document.getElementById('project-name-input').value.trim();
+            const code = window.editor.getValue();
+
+            if (!window.db || !window.userId) {
+                showNotification('Authentication not ready. Please wait.', 'bg-yellow-600');
+                return;
+            }
+
+            if (!projectName) {
+                showNotification('Please enter a project name.', 'bg-yellow-600');
+                return;
+            }
+
+            try {
+                // Use the project name as the document ID for simplicity, sanitizing it
+                const docId = projectName.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 50) + '-' + Date.now();
+                const projectDocRef = doc(window.projectCollectionRef, docId);
+
+                await setDoc(projectDocRef, {
+                    name: projectName,
+                    code: code,
+                    createdAt: serverTimestamp(),
+                    lastUpdated: serverTimestamp()
+                });
+
+                closeSaveModal();
+                showNotification('Project "${projectName}" saved successfully!', 'bg-blue-600');
+
+            } catch (error) {
+                console.error("Error saving project:", error);
+                showNotification('Error saving project: ${error.message}', 'bg-red-600');
+            }
+        }
+
+        // Project Deleting Function
+        window.deleteProject = async function(docId, projectName) {
+            if (!window.db || !window.userId) {
+                showNotification('Authentication not ready. Please wait.', 'bg-yellow-600');
+                return;
+            }
+            if (!confirm('Are you sure you want to delete project: "${projectName}"?')) return;
+
+            try {
+                const projectDocRef = doc(window.projectCollectionRef, docId);
+                await deleteDoc(projectDocRef);
+                showNotification('Project "${projectName}" deleted.', 'bg-red-500');
+            } catch (error) {
+                console.error("Error deleting project:", error);
+                showNotification('Error deleting project: ${error.message}', 'bg-red-600');
+            }
+        }
+
+        // Real-time listener for projects
+        window.listenForProjects = function() {
+            if (!window.projectCollectionRef) {
+                console.error("Project collection reference not initialized.");
+                return;
+            }
+
+            // Simple query to fetch documents (sorting is done client-side to avoid index issues)
+            const q = query(window.projectCollectionRef);
+
+            onSnapshot(q, (snapshot) => {
+                const projects = [];
+                snapshot.forEach((doc) => {
+                    projects.push({ id: doc.id, ...doc.data() });
+                });
+                
+                // Sort by last updated date descending (newest first)
+                projects.sort((a, b) => {
+                    const timeA = a.lastUpdated?.toMillis() || 0;
+                    const timeB = b.lastUpdated?.toMillis() || 0;
+                    return timeB - timeA;
+                });
+
+                window.renderProjectList(projects);
+            }, (error) => {
+                console.error("Error listening to projects:", error);
+                document.getElementById('project-list').innerHTML = '<p class="text-red-400">Error loading projects: ${error.message}</p>';
+            });
+        }
+
+
+        // Global setup function called on window load
+        window.onload = function() {
+            // 1. Initialize Ace Editor
+            window.editor = ace.edit("editor");
+            window.editor.setTheme("ace/theme/tomorrow_night_eighties");
+            window.editor.session.setMode("ace/mode/python");
+            window.editor.setOptions({
+                enableLiveAutocompletion: true,
+                tabSize: 4,
+                useSoftTabs: true
+            });
+
+            // 2. Initialize Firebase and Auth
+            setupFirebase();
+        }
+    </script>
+
+    <!-- Main Application Logic (Skulpt and UI) -->
+    <script>
+        // --- Skulpt Execution Functions ---
+
+        // Function to handle standard output (print)
+        function outf(text) {
+            const output = document.getElementById('output-area');
+            // Skulpt passes text in chunks, so we append
+            output.textContent += text;
+        }
+
+        // Function to handle errors
+        function builtinRead(x) {
+            if (Sk.builtinFiles === undefined || Sk.builtinFiles["files"][x] === undefined)
+                throw "File not found: '" + x + "'";
+            return Sk.builtinFiles["files"][x];
+        }
+
+        // Main function to run the code
+        function runPythonCode() {
+            const code = editor.getValue();
+            const output = document.getElementById('output-area');
+
+            // Clear previous output and show execution message
+            output.textContent = '--- Running Code... ---\n';
+            output.scrollTop = output.scrollHeight; // Scroll to bottom
+
+            const options = {
+                output: outf,
+                read: builtinRead,
+                retainGlobals: true,
+                execLimit: 5000, // Time limit in ms
+                // Set the correct Python version for modern features
+                // This is important for print() function to work correctly
+                __future__: Sk.python3
+            };
+
+            try {
+                Sk.misceval.asyncToPromise(function() {
+                    return Sk.importMainWithBody("<stdin>", false, code, true);
+                }).then(
+                    function(mod) {
+                        // Success: Append a final message
+                        output.textContent += '\n\n--- Execution Finished Successfully ---';
+                        output.scrollTop = output.scrollHeight;
+                    },
+                    function(err) {
+                        // Failure: Log the error
+                        output.textContent += '\n\n--- ERROR ---\n';
+                        // Clean up the error message for better readability
+                        let errMsg = err.toString();
+                        if (errMsg.startsWith('(<stdin>,')) {
+                            errMsg = errMsg.substring(errMsg.indexOf('):') + 2).trim();
+                        }
+                        output.textContent += 'Python Error: ' + errMsg;
+                        output.scrollTop = output.scrollHeight;
+                    }
+                );
+            } catch (e) {
+                output.textContent += '\n\n--- FATAL ERROR ---\n${e.toString()}';
+                output.scrollTop = output.scrollHeight;
+            }
+        }
+
+        // --- UI and Modal Functions ---
+
+        function showNotification(message, colorClass = 'bg-gray-700') {
+            const notif = document.getElementById('notification');
+            notif.textContent = message;
+            notif.className = 'fixed top-4 right-4 p-3 rounded-lg shadow-2xl transition-opacity duration-300 opacity-100 text-white ${colorClass} z-50';
+
+            setTimeout(() => {
+                notif.classList.remove('opacity-100');
+                notif.classList.add('opacity-0');
+            }, 3000);
+        }
+
+        // Save Modal
+        function openSaveModal() {
+            document.getElementById('project-name-input').value = '';
+            document.getElementById('save-modal').classList.remove('hidden');
+        }
+
+        function closeSaveModal() {
+            document.getElementById('save-modal').classList.add('hidden');
+        }
+
+        // Load Modal
+        function openLoadModal() {
+            document.getElementById('load-modal').classList.remove('hidden');
+            // The listenForProjects function updates the list automatically
+        }
+
+        function closeLoadModal() {
+            document.getElementById('load-modal').classList.add('hidden');
+        }
+
+        // Function to inject loaded code into the editor
+        window.loadCodeIntoEditor = function(code, projectName) {
+            editor.setValue(code, -1); // -1 moves cursor to start
+            editor.focus();
+            showNotification('Loaded project: "${projectName}"', 'bg-purple-600');
+            closeLoadModal();
+        }
+        
+        // Function to render the list of saved projects
+        window.renderProjectList = function(projects) {
+            const listContainer = document.getElementById('project-list');
+            listContainer.innerHTML = '';
+
+            if (projects.length === 0) {
+                listContainer.innerHTML = '<p class="text-gray-400 p-2">No projects saved yet.</p>';
+                return;
+            }
+
+            projects.forEach(project => {
+                const date = project.lastUpdated ? new Date(project.lastUpdated.seconds * 1000).toLocaleString() : 'N/A';
+                
+                const item = document.createElement('div');
+                item.className = 'flex items-center justify-between bg-gray-600 p-3 rounded-lg hover:bg-gray-500 transition duration-150';
+                item.innerHTML = '
+                    <div class="flex flex-col flex-grow truncate mr-4">
+                        <span class="text-white font-medium truncate">${project.name}</span>
+                        <span class="text-xs text-gray-300">Last updated: ${date}</span>
+                    </div>
+                    <div class="flex space-x-2 flex-shrink-0">
+                        <button onclick="loadCodeIntoEditor(decodeURIComponent('${encodeURIComponent(project.code)}'), '${project.name}')" 
+                                class="px-3 py-1 text-sm bg-teal-500 hover:bg-teal-400 text-white rounded-md transition duration-150">Load</button>
+                        <button onclick="deleteProject('${project.id}', '${project.name}')" 
+                                class="p-1 text-red-400 hover:text-red-300 rounded-md transition duration-150">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                            </svg>
+                        </button>
+                    </div>
+                ';
+                listContainer.appendChild(item);
+            });
+        }
+    </script>
+
+</body>
+</html>
+
